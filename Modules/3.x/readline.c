@@ -150,6 +150,17 @@ PyDoc_STRVAR(doc_parse_and_bind,
 Parse and execute single line of a readline init file.");
 
 
+static PyObject *
+get_completion_invoking_key(PyObject *self, PyObject *noarg)
+{
+    return PyInt_FromLong(rl_completion_invoking_key);
+}
+
+PyDoc_STRVAR(doc_get_completion_invoking_key,
+"get_completion_invoking_key() -> int\n\
+Get the invoking key of completion being attempted.");
+
+
 /* Exported function to parse a readline init file */
 
 static PyObject *
@@ -776,6 +787,8 @@ contents of the line buffer.");
 static struct PyMethodDef readline_methods[] =
 {
     {"parse_and_bind", parse_and_bind, METH_VARARGS, doc_parse_and_bind},
+    {"get_completion_invoking_key", get_completion_invoking_key,
+     METH_NOARGS, doc_get_completion_invoking_key},
     {"get_line_buffer", get_line_buffer, METH_NOARGS, doc_get_line_buffer},
     {"insert_text", insert_text, METH_VARARGS, doc_insert_text},
     {"redisplay", redisplay, METH_NOARGS, doc_redisplay},
