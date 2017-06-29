@@ -55,29 +55,14 @@ def which_shell():
 
 # Check if any of the distutils commands involves building the module,
 # and check for quiet vs. verbose option
-building = False
 verbose = True
 for s in sys.argv[1:]:
-    if s.startswith('bdist') or s.startswith('build') or s.startswith('install'):
-        building = True
     if s in ['--quiet', '-q']:
         verbose = False
     if s in ['--verbose', '-v']:
         verbose = True
 
 # Build readline first, if it is not there and we are building the module
-if building and not os.path.exists('readline/libreadline.a'):
-    shell_path = which_shell()
-    if verbose:
-        print("\n============ Building the readline library ============\n")
-        os.system('cd rl && %s ./build.sh' % shell_path)
-        print("\n============ Building the readline extension module ============\n")
-    else:
-        os.system('cd rl && %s ./build.sh > /dev/null 2>&1' % shell_path)
-    # Add symlink that simplifies include and link paths to real library
-    if not (os.path.exists('readline') or os.path.islink('readline')):
-        os.symlink(os.path.join('rl','readline-lib'), 'readline')
-
 # Workaround for OS X 10.9.2 and Xcode 5.1+
 # The latest clang treats unrecognized command-line options as errors and the
 # Python CFLAGS variable contains unrecognized ones (e.g. -mno-fused-madd).
@@ -86,6 +71,18 @@ if building and not os.path.exists('readline/libreadline.a'):
 # follows the approach suggested in http://stackoverflow.com/questions/724664.
 class build_ext_subclass(build_ext):
     def build_extensions(self):
+        if not os.path.exists('readline/libreadline.a'):
+            shell_path = which_shell()
+            if verbose:
+                print("\n============ Building the readline library ============\n")
+                os.system('cd rl && %s ./build.sh' % shell_path)
+                print("\n============ Building the readline extension module ============\n")
+            else:
+                os.system('cd rl && %s ./build.sh > /dev/null 2>&1' % shell_path)
+            # Add symlink that simplifies include and link paths to real library
+            if not (os.path.exists('readline') or os.path.islink('readline')):
+                os.symlink(os.path.join('rl','readline-lib'), 'readline')
+
         if sys.platform == 'darwin':
             # Test the compiler that will actually be used to see if it likes flags
             proc = subprocess.Popen(self.compiler.compiler + ['-v'],
