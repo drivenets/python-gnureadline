@@ -153,7 +153,7 @@ Parse and execute single line of a readline init file.");
 static PyObject *
 get_completion_invoking_key(PyObject *self, PyObject *noarg)
 {
-    return PyInt_FromLong(rl_completion_invoking_key);
+    return PyLong_FromLong(rl_completion_invoking_key);
 }
 
 PyDoc_STRVAR(doc_get_completion_invoking_key,
