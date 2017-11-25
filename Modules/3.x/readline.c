@@ -782,6 +782,23 @@ Change what's displayed on the screen to reflect the current\n\
 contents of the line buffer.");
 
 
+
+static PyObject *
+completion_query_items(PyObject *self, PyObject *args)
+{
+    int items;
+    if (!PyArg_ParseTuple(args, "i:items", &items)) {
+        return NULL;
+    }
+    rl_completion_query_items = items;
+    Py_RETURN_NONE;
+}
+
+PyDoc_STRVAR(doc_completion_query_items,
+"completion_query_items(int) -> None\n\
+Up to this many items will be displayed in response to a possible-completions call.");
+
+
 /* Table of functions exported by the module */
 
 static struct PyMethodDef readline_methods[] =
@@ -828,6 +845,8 @@ static struct PyMethodDef readline_methods[] =
      METH_VARARGS, doc_set_completion_display_matches_hook},
     {"set_startup_hook", set_startup_hook,
      METH_VARARGS, doc_set_startup_hook},
+    {"completion_query_items", completion_query_items,
+     METH_VARARGS, doc_completion_query_items},
 #ifdef HAVE_RL_PRE_INPUT_HOOK
     {"set_pre_input_hook", set_pre_input_hook,
      METH_VARARGS, doc_set_pre_input_hook},
