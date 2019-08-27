@@ -97,10 +97,7 @@ class build_ext_subclass(build_ext):
                     ext.extra_compile_args += ['-Wno-error=unused-command-line-argument-hard-error-in-future']
         build_ext.build_extensions(self)
 
-# First try version-specific readline.c, otherwise fall back to major-only version
-source = os.path.join('Modules', '%d.%d' % sys.version_info[:2], 'readline.c')
-if not os.path.exists(source):
-    source = os.path.join('Modules', '%d.x' % (sys.version_info[0],), 'readline.c')
+source = os.path.join('Modules', 'readline.c')
 
 setup(
     name="gnureadline",
