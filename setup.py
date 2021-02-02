@@ -12,14 +12,11 @@ if sys.platform == 'win32':
 elif sys.platform == 'cygwin':
     sys.exit('Error: this module is not needed for Cygwin (and probably does not compile anyway)')
 
-here = os.path.abspath(os.path.dirname(__file__))
-README = open(os.path.join(here, 'README.rst')).read()
-NEWS = open(os.path.join(here, 'NEWS.rst')).read()
-
-VERSION = '6.3.3'
+VERSION = '8.0.0'
 DESCRIPTION = 'The standard Python readline extension statically linked against the GNU readline library.'
-LONG_DESCRIPTION = README + '\n\n' + NEWS
+LONG_DESCRIPTION = 'Stand-alone GNU readline module'
 CLASSIFIERS = [
+    'Development Status :: 5 - Production/Stable',
     'Environment :: Console',
     'Intended Audience :: Developers',
     'Intended Audience :: End Users/Desktop',
@@ -43,6 +40,7 @@ DEFINE_MACROS = [
     ('HAVE_RL_COMPLETION_MATCHES', None),
     ('HAVE_RL_COMPLETION_SUPPRESS_APPEND', None),
     ('HAVE_RL_PRE_INPUT_HOOK', None),
+    ('HAVE_RL_RESIZE_TERMINAL', None),
 ]
 
 
@@ -105,14 +103,14 @@ setup(
     description=DESCRIPTION,
     long_description=LONG_DESCRIPTION,
     classifiers=CLASSIFIERS,
-    maintainer="Ludwig Schwardt; Sridhar Ratnakumar",
-    maintainer_email="ludwig.schwardt@gmail.com; github@srid.name",
+    maintainer="Ludwig Schwardt, Sridhar Ratnakumar",
+    maintainer_email="ludwig.schwardt@gmail.com, srid@srid.ca",
     url="http://github.com/ludwigschwardt/python-gnureadline",
     license="GNU GPL",
     platforms=['MacOS X', 'Posix'],
     include_package_data=True,
     py_modules=['readline'],
-    cmdclass={'build_ext' : build_ext_subclass},
+    cmdclass={'build_ext': build_ext_subclass},
     ext_modules=[
         Extension(name="gnureadline",
                   sources=[source],
@@ -120,7 +118,7 @@ setup(
                   define_macros=DEFINE_MACROS,
                   extra_objects=['readline/libreadline.a', 'readline/libhistory.a'],
                   libraries=['ncurses']
-        ),
+                  ),
     ],
     zip_safe=False,
 )
