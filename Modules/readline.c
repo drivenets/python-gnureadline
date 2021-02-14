@@ -1190,6 +1190,9 @@ setup_readline(readlinestate *mod_state)
         strdup(" \t\n`~!@#$%^&*()-=+[{]}\\|;:'\",<>/?");
         /* All nonalphanums except '.' */
 
+    /* disable bracketed-paste in order to allow pasting multiple commands, the default was changed in 8.1 to 'on' */
+    rl_variable_bind("enable-bracketed-paste", "off");
+
     mod_state->begidx = PyLong_FromLong(0L);
     mod_state->endidx = PyLong_FromLong(0L);
 
