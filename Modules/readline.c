@@ -315,7 +315,15 @@ set_history_length(PyObject *self, PyObject *args)
     int length = _history_length;
     if (!PyArg_ParseTuple(args, "i:set_history_length", &length))
         return NULL;
+
+    /* set history length in files */
     _history_length = length;
+
+    /* limit history length in memory */
+    char hist_size[32];
+    snprintf(hist_size, 32, "%d", length);
+    rl_variable_bind("history-size", hist_size);
+
     Py_RETURN_NONE;
 }
 
@@ -726,7 +734,7 @@ get_history_item(PyObject *self, PyObject *args)
         }
     }
 #endif /* __APPLE__ */
-    if ((hist_ent = history_get(idx)))
+    if ((hist_ent = history_get(idx+history_base)))
         return decode(hist_ent->line);
     else {
         Py_RETURN_NONE;
