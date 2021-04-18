@@ -746,6 +746,100 @@ PyDoc_STRVAR(doc_get_history_item,
 return the current contents of history item at index.");
 
 
+/* Switch history mode */
+
+/* current history mode  */
+static int _history_mode = 0;
+/* history lists that store content of the inactive history mode */
+static char** _history_lists[2] = {NULL, NULL};
+static int _history_lists_size[2] = {0, 0};
+
+static void _clear_history_lists()
+{
+    int i, j;
+    for(i = 0; i < 2; ++i) {
+        char **cur_list = _history_lists[i];
+        if (!cur_list)
+            continue;
+        for (j = 0; j < _history_lists_size[i]; ++j) {
+            if (cur_list[j])
+                free(cur_list[j]);
+        }
+        free(cur_list);
+        _history_lists[i] = NULL;
+        _history_lists_size[i] = 0;
+    }
+}
+
+static void
+_switch_history_mode(next_mode)
+{
+    int i = 0;
+    /* save current history in the _history_lists */
+    HISTORY_STATE *current_st = history_get_history_state();
+    if (current_st->length > 0) {
+        HIST_ENTRY *hist_ent;
+        char **current_list = (char **)malloc((current_st->length) * sizeof (char *));
+        if (current_list) {
+            for (i = 0; i < current_st->length; ++i) {
+                current_list[i] = NULL;
+                if ((hist_ent = history_get(i + history_base))) {
+                    char *line = hist_ent->line;
+                    if (NULL == line)
+                        continue;
+                    char *new_line = (char *)malloc(strlen(line) + 1);
+                    if (NULL == new_line)
+                        break;
+                    strcpy(new_line, line);
+                    current_list[i] = new_line;
+                }
+            }
+            _history_lists[_history_mode] = current_list;
+            _history_lists_size[_history_mode] = i;
+        }
+    }
+    free(current_st);
+
+    /* clear the current history entirely */
+    clear_history();
+
+    /* rewrite the history from the saved list */
+    char **new_list = _history_lists[next_mode];
+    if (NULL == new_list)
+        return;
+
+    /* add line-by-line using readline API */
+    for (i = 0; i < _history_lists_size[next_mode]; ++i) {
+        char *line = new_list[i];
+        if (line) {
+            add_history((const char*)line);
+            free(line);
+        }
+    }
+    /* cleanup */
+    free(new_list);
+    _history_lists[next_mode] = NULL;
+    _history_lists_size[next_mode] = 0;
+}
+
+static PyObject*
+switch_history_mode(PyObject *self, PyObject *args)
+{
+    int next_mode = _history_mode;
+    if (!PyArg_ParseTuple(args, "i:switch_history_mode", &next_mode))
+        return NULL;
+
+    _switch_history_mode(next_mode);
+    _history_mode = next_mode;
+    Py_RETURN_NONE;
+}
+
+PyDoc_STRVAR(switch_history_mode_doc,
+"switch_history_mode(mode) -> None\n\
+switch to the new mode and restore its history.\n\
+History is saved in a global variable between switches.");
+
+
 /* Exported function to get current length of history */
 
 static PyObject *
@@ -780,6 +874,7 @@ static PyObject *
 py_clear_history(PyObject *self, PyObject *noarg)
 {
     clear_history();
+    _clear_history_lists();
     Py_RETURN_NONE;
 }
 
@@ -881,6 +976,8 @@ static struct PyMethodDef readline_methods[] =
      METH_VARARGS, set_history_length_doc},
     {"get_history_length", get_history_length,
      METH_NOARGS, get_history_length_doc},
+    {"switch_history_mode", switch_history_mode,
+     METH_VARARGS, switch_history_mode_doc},
     {"set_completer", set_completer, METH_VARARGS, doc_set_completer},
     {"get_completer", get_completer, METH_NOARGS, doc_get_completer},
     {"get_completion_type", get_completion_type,
