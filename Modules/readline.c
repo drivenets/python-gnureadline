@@ -771,7 +771,7 @@ static void _clear_history_lists()
     }
 }
 
-static void
+static PyObject*
 _switch_history_mode(next_mode)
 {
     int i = 0;
@@ -780,23 +780,37 @@ _switch_history_mode(next_mode)
     if (current_st->length > 0) {
         HIST_ENTRY *hist_ent;
         char **current_list = (char **)malloc((current_st->length) * sizeof (char *));
-        if (current_list) {
-            for (i = 0; i < current_st->length; ++i) {
-                current_list[i] = NULL;
-                if ((hist_ent = history_get(i + history_base))) {
-                    char *line = hist_ent->line;
-                    if (NULL == line)
-                        continue;
-                    char *new_line = (char *)malloc(strlen(line) + 1);
-                    if (NULL == new_line)
-                        break;
-                    strcpy(new_line, line);
-                    current_list[i] = new_line;
-                }
-            }
-            _history_lists[_history_mode] = current_list;
-            _history_lists_size[_history_mode] = i;
+        if (NULL == current_list) {
+            free(current_st);
+            _clear_history_lists();
+            clear_history();
+            return PyErr_NoMemory();
         }
+        for (i = 0; i < current_st->length; ++i) {
+            current_list[i] = NULL;
+            if ((hist_ent = history_get(i + history_base))) {
+                char *line = hist_ent->line;
+                if (NULL == line)
+                    continue;
+                char *new_line = (char *)malloc(strlen(line) + 1);
+                if (NULL == new_line) {
+                    int j;
+                    for (j = 0; j < i-1; ++j) {
+                        if (current_list[j])
+                            free(current_list[j]);
+                    }
+                    free(current_list);
+                    free(current_st);
+                    _clear_history_lists();
+                    clear_history();
+                    return PyErr_NoMemory();
+                }
+                strcpy(new_line, line);
+                current_list[i] = new_line;
+            }
+        }
+        _history_lists[_history_mode] = current_list;
+        _history_lists_size[_history_mode] = i;
     }
     free(current_st);
 
@@ -806,7 +820,7 @@ _switch_history_mode(next_mode)
     /* rewrite the history from the saved list */
     char **new_list = _history_lists[next_mode];
     if (NULL == new_list)
-        return;
+        Py_RETURN_NONE;
 
     /* add line-by-line using readline API */
     for (i = 0; i < _history_lists_size[next_mode]; ++i) {
@@ -820,18 +834,20 @@ _switch_history_mode(next_mode)
     free(new_list);
     _history_lists[next_mode] = NULL;
     _history_lists_size[next_mode] = 0;
+    Py_RETURN_NONE;
 }
 
 static PyObject*
 switch_history_mode(PyObject *self, PyObject *args)
 {
     int next_mode = _history_mode;
+    PyObject* result;
     if (!PyArg_ParseTuple(args, "i:switch_history_mode", &next_mode))
         return NULL;
 
-    _switch_history_mode(next_mode);
+    result = _switch_history_mode(next_mode);
     _history_mode = next_mode;
-    Py_RETURN_NONE;
+    return result;
 }
 
 PyDoc_STRVAR(switch_history_mode_doc,
