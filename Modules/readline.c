@@ -77,6 +77,7 @@ on_completion_display_matches_hook(char **matches,
    (see issue #17289 for the motivation). */
 static char *completer_word_break_characters;
 
+
 typedef struct {
   PyObject *completion_display_matches_hook;
   PyObject *startup_hook;
@@ -799,6 +800,20 @@ PyDoc_STRVAR(doc_completion_query_items,
 Up to this many items will be displayed in response to a possible-completions call.");
 
 
+
+static PyObject*
+set_sort_completion_matches(PyObject *self, PyObject *args)
+{
+    int sort_completion_matches;
+    if (!PyArg_ParseTuple(args, "i:set_sort_completion_matches", &sort_completion_matches))
+        return NULL;
+    rl_sort_completion_matches = sort_completion_matches;
+    Py_RETURN_NONE;
+}
+PyDoc_STRVAR(set_sort_completion_matches_doc,
+"set_sort_completion_matches(int) -> None\n\
+Changes the value of rl_sort_completion_matches.");
+
 /* Table of functions exported by the module */
 
 static struct PyMethodDef readline_methods[] =
@@ -847,6 +862,8 @@ static struct PyMethodDef readline_methods[] =
      METH_VARARGS, doc_set_startup_hook},
     {"completion_query_items", completion_query_items,
      METH_VARARGS, doc_completion_query_items},
+    {"set_sort_completion_matches", set_sort_completion_matches,
+     METH_VARARGS, set_sort_completion_matches_doc},
 #ifdef HAVE_RL_PRE_INPUT_HOOK
     {"set_pre_input_hook", set_pre_input_hook,
      METH_VARARGS, doc_set_pre_input_hook},
