@@ -102,8 +102,8 @@ class build_ext_subclass(build_ext):
 
 # First try version-specific readline.c, otherwise fall back to major-only version
 python_ver = '%d.%d' % sys.version_info[:2]
-if python_ver != '3.8':
-    raise ValueError("DRIVENETS changes are only on python3.8 readline.c")
+if sys.version_info[0] != 3 or sys.version_info[1] < 8:
+    raise ValueError("DRIVENETS changes are only on python3.8+ readline.c")
 
 source = os.path.join('Modules', python_ver, 'readline.c')
 if not os.path.exists(source):
