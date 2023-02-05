@@ -212,6 +212,12 @@ readline_parse_and_bind(PyObject *module, PyObject *string)
     Py_RETURN_NONE;
 }
 
+static PyObject *
+get_completion_invoking_key_impl(PyObject *module)
+{
+    return PyLong_FromLong(rl_completion_invoking_key);
+}
+
 /* Exported function to parse a readline init file */
 
 /*[clinic input]
@@ -374,7 +380,12 @@ static PyObject *
 readline_set_history_length_impl(PyObject *module, int length)
 /*[clinic end generated code: output=e161a53e45987dc7 input=b8901bf16488b760]*/
 {
+    /* set history length in files */
     _history_length = length;
+    /* limit history length in memory */
+    char hist_size[32];
+    snprintf(hist_size, 32, "%d", length);
+    rl_variable_bind("history-size", hist_size);
     Py_RETURN_NONE;
 }
 
@@ -391,6 +402,110 @@ readline_get_history_length_impl(PyObject *module)
 /*[clinic end generated code: output=83a2eeae35b6d2b9 input=5dce2eeba4327817]*/
 {
     return PyLong_FromLong(_history_length);
+}
+
+/* Switch history mode */
+
+/* current history mode  */
+static int _history_mode = 0;
+/* history lists that store content of the inactive history mode */
+static char** _history_lists[2] = {NULL, NULL};
+static int _history_lists_size[2] = {0, 0};
+
+static void _clear_history_lists()
+{
+    int i, j;
+    for(i = 0; i < 2; ++i) {
+        char **cur_list = _history_lists[i];
+        if (!cur_list)
+            continue;
+        for (j = 0; j < _history_lists_size[i]; ++j) {
+            if (cur_list[j])
+                free(cur_list[j]);
+        }
+        free(cur_list);
+        _history_lists[i] = NULL;
+        _history_lists_size[i] = 0;
+    }
+}
+
+static PyObject*
+_switch_history_mode(int next_mode)
+{
+    int i = 0;
+    /* save current history in the _history_lists */
+    HISTORY_STATE *current_st = history_get_history_state();
+    if (current_st->length > 0) {
+        HIST_ENTRY *hist_ent;
+        char **current_list = (char **)malloc((current_st->length) * sizeof (char *));
+        if (NULL == current_list) {
+            free(current_st);
+            _clear_history_lists();
+            clear_history();
+            return PyErr_NoMemory();
+        }
+        for (i = 0; i < current_st->length; ++i) {
+            current_list[i] = NULL;
+            if ((hist_ent = history_get(i + history_base))) {
+                char *line = hist_ent->line;
+                if (NULL == line)
+                    continue;
+                char *new_line = (char *)malloc(strlen(line) + 1);
+                if (NULL == new_line) {
+                    int j;
+                    for (j = 0; j < i-1; ++j) {
+                        if (current_list[j])
+                            free(current_list[j]);
+                    }
+                    free(current_list);
+                    free(current_st);
+                    _clear_history_lists();
+                    clear_history();
+                    return PyErr_NoMemory();
+                }
+                strcpy(new_line, line);
+                current_list[i] = new_line;
+            }
+        }
+        _history_lists[_history_mode] = current_list;
+        _history_lists_size[_history_mode] = i;
+    }
+    free(current_st);
+
+    /* clear the current history entirely */
+    clear_history();
+
+    /* rewrite the history from the saved list */
+    char **new_list = _history_lists[next_mode];
+    if (NULL == new_list)
+        Py_RETURN_NONE;
+
+    /* add line-by-line using readline API */
+    for (i = 0; i < _history_lists_size[next_mode]; ++i) {
+        char *line = new_list[i];
+        if (line) {
+            add_history((const char*)line);
+            free(line);
+        }
+    }
+    /* cleanup */
+    free(new_list);
+    _history_lists[next_mode] = NULL;
+    _history_lists_size[next_mode] = 0;
+    Py_RETURN_NONE;
+}
+
+static PyObject*
+switch_history_mode(PyObject *self, PyObject *args)
+{
+    int next_mode = _history_mode;
+    PyObject* result;
+    if (!PyArg_ParseTuple(args, "i:switch_history_mode", &next_mode))
+        return NULL;
+
+    result = _switch_history_mode(next_mode);
+    _history_mode = next_mode;
+    return result;
 }
 
 /* Generic hook function setter */
@@ -468,6 +583,27 @@ readline_set_startup_hook_impl(PyObject *module, PyObject *function)
 {
     return set_hook("startup_hook", &readlinestate_global->startup_hook,
             function);
+}
+
+static PyObject *
+completion_query_items_impl(PyObject *module, PyObject *args)
+{
+    int items;
+    if (!PyArg_ParseTuple(args, "i:items", &items)) {
+        return NULL;
+    }
+    rl_completion_query_items = items;
+    Py_RETURN_NONE;
+}
+
+static PyObject *
+set_sort_completion_matches_impl(PyObject *module, PyObject *args)
+{
+    int sort_completion_matches;
+    if (!PyArg_ParseTuple(args, "i:set_sort_completion_matches", &sort_completion_matches))
+        return NULL;
+    rl_sort_completion_matches = sort_completion_matches;
+    Py_RETURN_NONE;
 }
 
 #ifdef HAVE_RL_PRE_INPUT_HOOK
@@ -843,7 +979,7 @@ readline_get_history_item_impl(PyObject *module, int idx)
             Py_RETURN_NONE;
         }
     }
-    if ((hist_ent = history_get(idx)))
+    if ((hist_ent = history_get(idx+history_base)))
         return decode(hist_ent->line);
     else {
         Py_RETURN_NONE;
@@ -895,6 +1031,7 @@ readline_clear_history_impl(PyObject *module)
 /*[clinic end generated code: output=1f2dbb0dfa5d5ebb input=208962c4393f5d16]*/
 {
     clear_history();
+    _clear_history_lists();
     Py_RETURN_NONE;
 }
 #endif
@@ -947,6 +1084,7 @@ readline_redisplay_impl(PyObject *module)
 static struct PyMethodDef readline_methods[] =
 {
     READLINE_PARSE_AND_BIND_METHODDEF
+    GET_COMPLETION_INVOKING_KEY_METHODDEF
     READLINE_GET_LINE_BUFFER_METHODDEF
     READLINE_INSERT_TEXT_METHODDEF
     READLINE_REDISPLAY_METHODDEF
@@ -960,6 +1098,7 @@ static struct PyMethodDef readline_methods[] =
     READLINE_GET_CURRENT_HISTORY_LENGTH_METHODDEF
     READLINE_SET_HISTORY_LENGTH_METHODDEF
     READLINE_GET_HISTORY_LENGTH_METHODDEF
+    SWITCH_HISTORY_MODE_METHODDEF
     READLINE_SET_COMPLETER_METHODDEF
     READLINE_GET_COMPLETER_METHODDEF
     READLINE_GET_COMPLETION_TYPE_METHODDEF
@@ -973,6 +1112,8 @@ static struct PyMethodDef readline_methods[] =
     READLINE_GET_COMPLETER_DELIMS_METHODDEF
     READLINE_SET_COMPLETION_DISPLAY_MATCHES_HOOK_METHODDEF
     READLINE_SET_STARTUP_HOOK_METHODDEF
+    COMPLETION_QUERY_ITEMS_METHODDEF
+    SET_SORT_COMPLETION_MATCHES_METHODDEF
 #ifdef HAVE_RL_PRE_INPUT_HOOK
     READLINE_SET_PRE_INPUT_HOOK_METHODDEF
 #endif

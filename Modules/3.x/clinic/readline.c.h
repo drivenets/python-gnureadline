@@ -11,6 +11,22 @@ PyDoc_STRVAR(readline_parse_and_bind__doc__,
 #define READLINE_PARSE_AND_BIND_METHODDEF    \
     {"parse_and_bind", (PyCFunction)readline_parse_and_bind, METH_O, readline_parse_and_bind__doc__},
 
+PyDoc_STRVAR(get_completion_invoking_key__doc__,
+"get_completion_invoking_key($module, /)\n\
+Get the invoking key of completion being attempted.");
+
+static PyObject *
+get_completion_invoking_key_impl(PyObject *module);
+
+static PyObject *
+get_completion_invoking_key(PyObject *module, PyObject *Py_UNUSED(ignored))
+{
+    return get_completion_invoking_key_impl(module);
+}
+
+#define GET_COMPLETION_INVOKING_KEY_METHODDEF    \
+    {"get_completion_invoking_key", (PyCFunction)get_completion_invoking_key, METH_NOARGS, get_completion_invoking_key__doc__},
+
 PyDoc_STRVAR(readline_read_init_file__doc__,
 "read_init_file($module, filename=None, /)\n"
 "--\n"
@@ -205,6 +221,14 @@ readline_get_history_length(PyObject *module, PyObject *Py_UNUSED(ignored))
     return readline_get_history_length_impl(module);
 }
 
+PyDoc_STRVAR(switch_history_mode__doc__,
+"switch_history_mode(mode) -> None\n\
+switch to the new mode and restore its history.\n\
+History is saved in a global variable between switches.");
+
+#define SWITCH_HISTORY_MODE_METHODDEF    \
+    {"switch_history_mode", (PyCFunction)switch_history_mode, METH_VARARGS, switch_history_mode__doc__},
+
 PyDoc_STRVAR(readline_set_completion_display_matches_hook__doc__,
 "set_completion_display_matches_hook($module, function=None, /)\n"
 "--\n"
@@ -275,6 +299,38 @@ skip_optional:
 
 exit:
     return return_value;
+}
+
+PyDoc_STRVAR(completion_query_items__doc__,
+"completion_query_items(int) -> None\n\
+Up to this many items will be displayed in response to a possible-completions call.");
+
+#define COMPLETION_QUERY_ITEMS_METHODDEF    \
+    {"completion_query_items", (PyCFunction)(void(*)(void))completion_query_items, METH_VARARGS, completion_query_items__doc__},
+
+static PyObject *
+completion_query_items_impl(PyObject *module, PyObject *args);
+
+static PyObject *
+completion_query_items(PyObject *module, PyObject *args)
+{
+    return completion_query_items_impl(module, args);
+}
+
+PyDoc_STRVAR(set_sort_completion_matches__doc__,
+"set_sort_completion_matches(int) -> None\n\
+Changes the value of rl_sort_completion_matches.");
+
+#define SET_SORT_COMPLETION_MATCHES_METHODDEF    \
+    {"set_sort_completion_matches", (PyCFunction)(void(*)(void))set_sort_completion_matches, METH_VARARGS, set_sort_completion_matches__doc__},
+
+static PyObject *
+set_sort_completion_matches_impl(PyObject *module, PyObject *args);
+
+static PyObject *
+set_sort_completion_matches(PyObject *module, PyObject *args)
+{
+    return set_sort_completion_matches_impl(module, args);
 }
 
 #if defined(HAVE_RL_PRE_INPUT_HOOK)
