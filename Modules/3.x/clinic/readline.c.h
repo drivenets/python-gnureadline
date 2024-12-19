@@ -2,6 +2,12 @@
 preserve
 [clinic start generated code]*/
 
+PyDoc_STRVAR(readline_reinitialize__doc__,
+"Reinitialize the readline module.");
+
+#define READLINE_REINITIALIZE_METHODDEF    \
+    {"reinitialize",  (PyCFunction)readline_reinitialize, METH_NOARGS, readline_reinitialize__doc__},
+
 PyDoc_STRVAR(readline_parse_and_bind__doc__,
 "parse_and_bind($module, string, /)\n"
 "--\n"

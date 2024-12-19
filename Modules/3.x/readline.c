@@ -189,6 +189,28 @@ readline.parse_and_bind
 Execute the init line provided in the string argument.
 [clinic start generated code]*/
 
+// Forward declaration
+static int setup_readline(readlinestate *mod_state);
+
+
+/*
+The readline_reinitialize function resets and reinitializes
+the terminal and the readline library state. It is intended to
+handle scenarios where the terminal environment has changed,
+such as updates to TERM or TERMCAP variables, or when a
+reinitialization of the readline state is required.
+*/
+static PyObject *
+readline_reinitialize(PyObject *module, PyObject *string) {
+    readlinestate *mod_state = (readlinestate *) PyModule_GetState(module);
+    rl_reset_terminal(NULL);
+    if (setup_readline(mod_state) < 0) {
+        PyErr_NoMemory();
+        return NULL;
+    }
+    Py_RETURN_NONE;
+}
+
 static PyObject *
 readline_parse_and_bind(PyObject *module, PyObject *string)
 /*[clinic end generated code: output=1a1ede8afb9546c1 input=8a28a00bb4d61eec]*/
@@ -1083,6 +1105,7 @@ readline_redisplay_impl(PyObject *module)
 
 static struct PyMethodDef readline_methods[] =
 {
+    READLINE_REINITIALIZE_METHODDEF
     READLINE_PARSE_AND_BIND_METHODDEF
     GET_COMPLETION_INVOKING_KEY_METHODDEF
     READLINE_GET_LINE_BUFFER_METHODDEF
@@ -1418,6 +1441,10 @@ setup_readline(readlinestate *mod_state)
 
                With libedit, this call makes readline() crash. */
             rl_variable_bind ("enable-meta-key", "off");
+        }
+        else {
+            // if calling setup_readline again, we need to revert it to the default
+            rl_variable_bind ("enable-meta-key", "on");
         }
     }
 
